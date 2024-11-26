@@ -91,7 +91,7 @@ sortExpr =
               )
           )
       ),
-    Expr (App (Var "sort") [List [Cst 3, Cst 1, Cst 4]])
+    Expr (App (Var "sort") [])
   ]
 
 sort :: [Int] -> [Int]

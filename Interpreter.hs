@@ -32,7 +32,7 @@ interpret es =
         [ d | t <- es, isDefine t, let d =
                                          let Define f v = t
                                              Env e = initEnv
-                                             v' = interp v (Env ((f, v') : e))
+                                             v' = interp v (Env ((f, v') : topDefs ++ e))
                                           in (f, v')
         ]
    in snd $
