@@ -1,4 +1,5 @@
-import Programs
+module Interpreter where
+
 import Scheme
 
 newtype Env = Env [(String, Value)]
@@ -9,10 +10,10 @@ emptyEnv = Env []
 initEnv :: Env
 initEnv =
   Env
-    [ ("cond", L2 (\x (List xs) -> List (x : xs))),
-      ("car", L1 (\(List xs) -> head xs)),
-      ("cdr", L1 (\(List xs) -> List (tail xs))),
-      ("null?", L1 (\(List xs) -> if null xs then Q "#t" else Q "#f")),
+    [ ("cons", L2 (\x (Lst xs) -> Lst (x : xs))),
+      ("car", L1 (\(Lst xs) -> head xs)),
+      ("cdr", L1 (\(Lst xs) -> Lst (tail xs))),
+      ("null?", L1 (\(Lst xs) -> if null xs then Q "#t" else Q "#f")),
       ( "not",
         L1
           ( \x -> case x of
@@ -27,22 +28,30 @@ initEnv =
 
 interpret :: [TopExpr] -> Value
 interpret es =
-  snd $
-    foldl
-      ( \(env@(Env es), _) e ->
-          case e of
-            Define f v ->
-              let v' = interp v (Env ((f, v') : es))
-               in (Env ((f, v') : es), U ())
-            Expr e -> (env, interp e env)
-      )
-      (initEnv, U ())
-      es
+  let topDefs =
+        [ d | t <- es, isDefine t, let d =
+                                         let Define f v = t
+                                             Env e = initEnv
+                                             v' = interp v (Env ((f, v') : e))
+                                          in (f, v')
+        ]
+   in snd $
+        foldl
+          ( \(env@(Env es), _) e ->
+              case e of
+                Define f v ->
+                  let v' = interp v (Env (topDefs ++ es))
+                   in (Env ((f, v') : es), U ())
+                Expr e -> (env, interp e env)
+          )
+          (initEnv, U ())
+          es
 
 interp :: Expr -> Env -> Value
 interp (Var x) env = interpVar x env
 interp (Quote (Var x)) env = Q x
 interp (Cst c) env = C c
+interp (List xs) env = Lst (map (`interp` env) xs)
 interp (If cond csqt alt) env = interpCond cond csqt alt env
 interp (Lam [] body) env = interpPcr0 body env
 interp (Lam [x] body) env = interpPcr1 x body env
