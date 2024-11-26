@@ -32,7 +32,7 @@ interpret es =
       ( \(env@(Env es), _) e ->
           case e of
             Define f v ->
-              let v' = interp v env
+              let v' = interp v (Env ((f, v') : es))
                in (Env ((f, v') : es), U ())
             Expr e -> (env, interp e env)
       )
