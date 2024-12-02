@@ -62,6 +62,9 @@ takTest :: Bool
 takTest = C (tak 18 12 6) == interpret takExpr
 
 -- Selection Sort
+pie :: [Int]
+pie = [3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 5, 8, 9, 7, 9, 3, 2, 3, 8, 4, 6, 2, 6, 4, 3, 3, 8, 3, 2, 7, 9, 5, 0, 2, 8, 2, 7, 1, 8, 2, 8, 1, 8, 2, 8, 4, 5, 9, 0, 4, 5, 2, 3, 5, 3, 6, 0, 2, 8, 7, 4, 7, 1, 3, 5, 2, 6, 6, 2, 4]
+
 sortExpr :: [TopExpr]
 sortExpr =
   [ Define
@@ -91,7 +94,7 @@ sortExpr =
               )
           )
       ),
-    Expr (App (Var "sort") [])
+    Expr (App (Var "sort") [List (map Cst pie)])
   ]
 
 sort :: [Int] -> [Int]
@@ -105,3 +108,9 @@ sortAux lst rest min =
       if head lst < min
         then sortAux (tail lst) (min : rest) (head lst)
         else sortAux (tail lst) (head lst : rest) min
+
+sortTest :: Bool
+sortTest = Lst (map C $ sort pie) == interpret sortExpr
+
+allTests :: [Bool]
+allTests = [fibTest, takTest, sortTest]

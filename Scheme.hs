@@ -39,4 +39,6 @@ instance Show Value where
 instance Eq Value where
   (Q q1) == (Q q2) = q1 == q2
   (C c1) == (C c2) = c1 == c2
+  (U ()) == (U ()) = True
+  (Lst xs) == (Lst ys) = xs == ys
   _ == _ = False
