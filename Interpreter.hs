@@ -4,24 +4,26 @@ import Scheme
 
 interpret :: [TopExpr] -> Value
 interpret es =
-  let topDefs =
-        [ d | t <- es, isDefine t, let d =
-                                         let Define f v = t
-                                             Env e = initEnv
-                                             v' = interp v (Env ((f, v') : topDefs ++ e))
-                                          in (f, v')
-        ]
-   in snd $
-        foldl
-          ( \(env@(Env es), _) e ->
-              case e of
-                Define f v ->
-                  let v' = interp v (Env (topDefs ++ es))
-                   in (Env ((f, v') : es), U ())
-                Expr e -> (env, interp e env)
-          )
-          (initEnv, U ())
-          es
+  let (Env init) = initEnv
+   in let topDefs =
+            [ d | t <- es, isDefine t, let d =
+                                             let Define f v = t
+                                                 Env e = initEnv
+                                                 v' = interp v (Env ((f, v') : topDefs ++ e))
+                                              in (f, v')
+            ]
+              ++ init
+       in snd $
+            foldl
+              ( \(env@(Env es), _) e ->
+                  case e of
+                    Define f v ->
+                      let v' = interp v env
+                       in (Env ((f, v') : es), U ())
+                    Expr e -> (env, interp e env)
+              )
+              (Env topDefs, U ())
+              es
 
 interp :: Expr -> Env -> Value
 interp (Var x) env = interpVar x env

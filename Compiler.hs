@@ -4,11 +4,29 @@ import Scheme
 
 type Closure = (Env -> Value)
 
-compile :: Expr -> Value
-compile expr = gen expr initEnv
+compile :: Expr -> Closure
+compile = gen
 
-evaluate :: Expr -> Value
-evaluate expr = compile (Lam [] expr)
+evaluate :: [TopExpr] -> Value
+evaluate exprs =
+  let (Env init) = initEnv
+   in let topDefs =
+            [ d | t <- exprs, isDefine t, let d =
+                                                let Define f v = t
+                                                    Env e = initEnv
+                                                    v' = compile v (Env ((f, v') : topDefs ++ e))
+                                                 in (f, v')
+            ]
+              ++ init
+       in let (env, v) =
+                foldl
+                  ( \(Env env, _) expr -> case expr of
+                      Define f e -> let v = compile e (Env env) in (Env ((f, v) : env), v)
+                      Expr e -> (Env env, compile e (Env env))
+                  )
+                  (Env topDefs, U ())
+                  exprs
+           in v
 
 gen :: Expr -> Closure
 gen (Var x) = genRef x
