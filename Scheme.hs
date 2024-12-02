@@ -42,3 +42,27 @@ instance Eq Value where
   (U ()) == (U ()) = True
   (Lst xs) == (Lst ys) = xs == ys
   _ == _ = False
+
+newtype Env = Env [(String, Value)]
+
+emptyEnv :: Env
+emptyEnv = Env []
+
+initEnv :: Env
+initEnv =
+  Env
+    [ ("cons", L2 (\x (Lst xs) -> Lst (x : xs))),
+      ("car", L1 (\(Lst xs) -> head xs)),
+      ("cdr", L1 (\(Lst xs) -> Lst (tail xs))),
+      ("null?", L1 (\(Lst xs) -> if null xs then Q "#t" else Q "#f")),
+      ( "not",
+        L1
+          ( \x -> case x of
+              Q "#t" -> Q "#f"
+              Q "#f" -> Q "#t"
+          )
+      ),
+      ("<", L2 (\(C c1) (C c2) -> if c1 < c2 then Q "#t" else Q "#f")),
+      ("+", L2 (\(C c1) (C c2) -> C (c1 + c2))),
+      ("-", L2 (\(C c1) (C c2) -> C (c1 - c2)))
+    ]

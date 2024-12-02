@@ -1,5 +1,6 @@
 module Programs where
 
+import Compiler
 import Interpreter
 import Scheme
 
