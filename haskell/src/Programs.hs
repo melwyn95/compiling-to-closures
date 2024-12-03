@@ -60,7 +60,7 @@ tak x y z =
     else tak (tak (x - 1) y z) (tak (y - 1) z x) (tak (z - 1) x y)
 
 takTest :: Bool
-takTest = C (tak 18 12 6) == interpret takExpr
+takTest = C (tak 18 12 6) == interpret takExpr && C (tak 18 12 6) == evaluate takExpr
 
 -- Selection Sort
 pie :: [Int]
@@ -111,7 +111,7 @@ sortAux lst rest min =
         else sortAux (tail lst) (head lst : rest) min
 
 sortTest :: Bool
-sortTest = Lst (map C $ sort pie) == interpret sortExpr
+sortTest = Lst (map C $ sort pie) == interpret sortExpr && Lst (map C $ sort pie) == evaluate sortExpr
 
 allTests :: [Bool]
 allTests = [fibTest, takTest, sortTest]
