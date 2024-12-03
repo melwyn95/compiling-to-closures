@@ -2,36 +2,18 @@ module Compiler where
 
 import Scheme
 
-type Closure = (Env -> Value)
+type Closure = (Env -> (Env, Value))
 
 compile :: Expr -> Closure
 compile = gen
 
-evaluate :: [TopExpr] -> Value
-evaluate exprs =
-  let (Env init) = initEnv
-   in let topDefs =
-            [ d | t <- exprs, isDefine t, let d =
-                                                let Define f v = t
-                                                    Env e = initEnv
-                                                    v' = compile v (Env ((f, v') : topDefs ++ e))
-                                                 in (f, v')
-            ]
-              ++ init
-       in let (env, v) =
-                foldl
-                  ( \(Env env, _) expr -> case expr of
-                      Define f e -> let v = compile e (Env env) in (Env ((f, v) : env), v)
-                      Expr e -> (Env env, compile e (Env env))
-                  )
-                  (Env topDefs, U ())
-                  exprs
-           in v
+evaluate :: [Expr] -> Value
+evaluate exprs = snd $ foldl (\(env, _) e -> compile e env) (initEnv, U ()) exprs
 
 gen :: Expr -> Closure
 gen (Var x) = genRef x
-gen (Quote (Var x)) = \_ -> Q x
-gen (Cst c) = \_ -> C c
+gen (Quote (Var x)) = \env -> (env, Q x)
+gen (Cst c) = \env -> (env, C c)
 gen (List es) = genList (map gen es)
 gen (If cond csqt alt) = genCond (gen cond) (gen csqt) (gen alt)
 gen (Lam [] body) = genPrc0 (gen body)
@@ -45,35 +27,41 @@ gen (App f [x, y, z]) = genApp3 (gen f) (gen x) (gen y) (gen z)
 
 genRef :: String -> Closure
 genRef x (Env env) = case lookup x env of
-  Just v -> v
+  Just v -> (Env env, v)
   Nothing -> error ("Unbound variable: " ++ x)
 
 genList :: [Closure] -> Closure
-genList es env = Lst $ map (\ce -> ce env) es
+genList cs env =
+  let ys =
+        foldl
+          (\ys c -> snd (c env) : ys)
+          []
+          cs
+   in (env, Lst (reverse ys))
 
 genCond :: Closure -> Closure -> Closure -> Closure
-genCond cond csqt alt env = if cond env == Q "#t" then csqt env else alt env
+genCond cond csqt alt env = if snd (cond env) == Q "#t" then csqt env else alt env
 
 genPrc0 :: Closure -> Closure
-genPrc0 body env = L0 (\() -> body env)
+genPrc0 body env = (env, L0 (\env () -> body env))
 
 genPrc1 :: Closure -> String -> Closure
-genPrc1 body a (Env env) = L1 (\x -> body (Env ((a, x) : env)))
+genPrc1 body a env = (env, L1 (\(Env env) x -> body (Env ((a, x) : env))))
 
 genPrc2 :: Closure -> String -> String -> Closure
-genPrc2 body a b (Env env) = L2 (\x y -> body (Env ((a, x) : (b, y) : env)))
+genPrc2 body a b env = (env, L2 (\(Env env) x y -> body (Env ((a, x) : (b, y) : env))))
 
 genPrc3 :: Closure -> String -> String -> String -> Closure
-genPrc3 body a b c (Env env) = L3 (\x y z -> body (Env ((a, x) : (b, y) : (c, z) : env)))
+genPrc3 body a b c env = (env, L3 (\(Env env) x y z -> body (Env ((a, x) : (b, y) : (c, z) : env))))
 
 genApp0 :: Closure -> Closure
-genApp0 f env = let (L0 f0) = f env in f0 ()
+genApp0 f env = let (_, L0 f0) = f env in f0 env ()
 
 genApp1 :: Closure -> Closure -> Closure
-genApp1 f x env = let (L1 f1) = f env in f1 (x env)
+genApp1 f x env = let (_, L1 f1) = f env in f1 env (snd (x env))
 
 genApp2 :: Closure -> Closure -> Closure -> Closure
-genApp2 f x y env = let (L2 f2) = f env in f2 (x env) (y env)
+genApp2 f x y env = let (_, L2 f2) = f env in f2 env (snd (x env)) (snd (y env))
 
 genApp3 :: Closure -> Closure -> Closure -> Closure -> Closure
-genApp3 f x y z env = let (L3 f3) = f env in f3 (x env) (y env) (z env)
+genApp3 f x y z env = let (_, L3 f3) = f env in f3 env (snd (x env)) (snd (y env)) (snd (z env))

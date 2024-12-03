@@ -10,10 +10,10 @@ interp (Var x) env = interpVar x env
 interp (Quote (Var x)) env = (env, Q x)
 interp (Cst c) env = (env, C c)
 interp (List xs) env =
-  let (env, ys) =
+  let ys =
         foldl
-          (\(env, ys) x -> let (env1, y) = interp x env in (env1, y : ys))
-          (env, [])
+          (\ys x -> let (env1, y) = interp x env in y : ys)
+          []
           xs
    in (env, Lst (reverse ys))
 interp (If cond csqt alt) env = interpCond cond csqt alt env
@@ -36,8 +36,8 @@ interpCond :: Expr -> Expr -> Expr -> Env -> (Env, Value)
 interpCond cond csqt alt env =
   let (env1, v1) = interp cond env
    in if v1 == Q "#t"
-        then interp csqt env1
-        else interp alt env1
+        then interp csqt env
+        else interp alt env
 
 interpPcr0 :: Expr -> Value
 interpPcr0 body = L0 (\env () -> interp body env)
