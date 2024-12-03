@@ -2,93 +2,80 @@ module Interpreter where
 
 import Scheme
 
-interpret :: [TopExpr] -> Value
-interpret es =
-  let (Env init) = initEnv
-   in let topDefs =
-            [ d | t <- es, isDefine t, let d =
-                                             let Define f v = t
-                                                 Env e = initEnv
-                                                 v' = interp v (Env ((f, v') : topDefs ++ e))
-                                              in (f, v')
-            ]
-              ++ init
-       in snd $
-            foldl
-              ( \(env@(Env es), _) e ->
-                  case e of
-                    Define f v ->
-                      let v' = interp v env
-                       in (Env ((f, v') : es), U ())
-                    Expr e -> (env, interp e env)
-              )
-              (Env topDefs, U ())
-              es
+interpret :: [Expr] -> Value
+interpret es = snd $ foldl (\(env, _) e -> interp e env) (initEnv, U ()) es
 
-interp :: Expr -> Env -> Value
+interp :: Expr -> Env -> (Env, Value)
 interp (Var x) env = interpVar x env
-interp (Quote (Var x)) env = Q x
-interp (Cst c) env = C c
-interp (List xs) env = Lst (map (`interp` env) xs)
+interp (Quote (Var x)) env = (env, Q x)
+interp (Cst c) env = (env, C c)
+interp (List xs) env =
+  let (env, ys) =
+        foldl
+          (\(env, ys) x -> let (env1, y) = interp x env in (env1, y : ys))
+          (env, [])
+          xs
+   in (env, Lst (reverse ys))
 interp (If cond csqt alt) env = interpCond cond csqt alt env
-interp (Lam [] body) env = interpPcr0 body env
-interp (Lam [x] body) env = interpPcr1 x body env
-interp (Lam [x, y] body) env = interpPcr2 x y body env
-interp (Lam [x, y, z] body) env = interpPcr3 x y z body env
+interp (Lam [] body) env = (env, interpPcr0 body)
+interp (Lam [x] body) env = (env, interpPcr1 x body)
+interp (Lam [x, y] body) env = (env, interpPcr2 x y body)
+interp (Lam [x, y, z] body) env = (env, interpPcr3 x y z body)
 interp (App f []) env = interpApp0 f env
 interp (App f [x]) env = interpApp1 x f env
 interp (App f [x, y]) env = interpApp2 x y f env
 interp (App f [x, y, z]) env = interpApp3 x y z f env
 
-interpVar :: String -> Env -> Value
+interpVar :: String -> Env -> (Env, Value)
 interpVar x (Env env) =
   case lookup x env of
-    Just v -> v
+    Just v -> (Env env, v)
     Nothing -> error ("Unbound variable: " ++ x)
 
-interpCond :: Expr -> Expr -> Expr -> Env -> Value
+interpCond :: Expr -> Expr -> Expr -> Env -> (Env, Value)
 interpCond cond csqt alt env =
-  if interp cond env == Q "#t"
-    then interp csqt env
-    else interp alt env
+  let (env1, v1) = interp cond env
+   in if v1 == Q "#t"
+        then interp csqt env1
+        else interp alt env1
 
-interpPcr0 :: Expr -> Env -> Value
-interpPcr0 body env = L0 (\() -> interp body env)
+interpPcr0 :: Expr -> Value
+interpPcr0 body = L0 (\env () -> interp body env)
 
-interpPcr1 :: String -> Expr -> Env -> Value
-interpPcr1 a body (Env env) =
-  L1 (\x -> interp body (Env ((a, x) : env)))
+interpPcr1 :: String -> Expr -> Value
+interpPcr1 a body =
+  L1 (\(Env env) x -> interp body (Env ((a, x) : env)))
 
-interpPcr2 :: String -> String -> Expr -> Env -> Value
-interpPcr2 a b body (Env env) =
-  L2 (\x y -> interp body (Env ((a, x) : (b, y) : env)))
+interpPcr2 :: String -> String -> Expr -> Value
+interpPcr2 a b body =
+  L2 (\(Env env) x y -> interp body (Env ((a, x) : (b, y) : env)))
 
-interpPcr3 :: String -> String -> String -> Expr -> Env -> Value
-interpPcr3 a b c body (Env env) =
-  L3 (\x y z -> interp body (Env ((a, x) : (b, y) : (c, z) : env)))
+interpPcr3 :: String -> String -> String -> Expr -> Value
+interpPcr3 a b c body =
+  L3 (\(Env env) x y z -> interp body (Env ((a, x) : (b, y) : (c, z) : env)))
 
-interpApp0 :: Expr -> Env -> Value
+interpApp0 :: Expr -> Env -> (Env, Value)
 interpApp0 f env =
-  let L0 f' = interp f env
-   in f' ()
+  let (env1, L0 f') = interp f env
+   in f' env1 ()
 
-interpApp1 :: Expr -> Expr -> Env -> Value
+interpApp1 :: Expr -> Expr -> Env -> (Env, Value)
 interpApp1 x f env =
-  let L1 f' = interp f env
-      x' = interp x env
-   in f' x'
+  let (_, L1 f') = interp f env
+      (_, x') = interp x env
+   in f' env x'
 
-interpApp2 :: Expr -> Expr -> Expr -> Env -> Value
+interpApp2 :: Expr -> Expr -> Expr -> Env -> (Env, Value)
 interpApp2 x y f env =
-  let L2 f' = interp f env
-      x' = interp x env
-      y' = interp y env
-   in f' x' y'
+  let (_, L2 f') = interp f env
+      (_, x') = interp x env
+      (_, y') = interp y env
+   in f' env x' y'
 
-interpApp3 :: Expr -> Expr -> Expr -> Expr -> Env -> Value
+interpApp3 :: Expr -> Expr -> Expr -> Expr -> Env -> (Env, Value)
 interpApp3 x y z f env =
-  let L3 f' = interp f env
-      x' = interp x env
-      y' = interp y env
-      z' = interp z env
-   in f' x' y' z'
+  let (_, L3 f') = interp f env
+      (_, x') = interp x env
+      (_, y') = interp y env
+      (_, z') = interp z env
+   in f' env x' y' z'
