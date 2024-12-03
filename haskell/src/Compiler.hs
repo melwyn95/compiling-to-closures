@@ -4,11 +4,11 @@ import Scheme
 
 type Closure = (Env -> (Env, Value))
 
-compile :: Expr -> Closure
-compile = gen
+compile :: [Expr] -> [Closure]
+compile = map gen
 
-evaluate :: [Expr] -> Value
-evaluate exprs = snd $ foldl (\(env, _) e -> compile e env) (initEnv, U ()) exprs
+evaluate :: [Closure] -> Value
+evaluate cls = snd $ foldl (\(env, _) c -> c env) (initEnv, U ()) cls
 
 gen :: Expr -> Closure
 gen (Var x) = genRef x

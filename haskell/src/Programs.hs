@@ -29,8 +29,11 @@ fibExpr =
 fib :: Int -> Int
 fib x = if x < 2 then x else fib (x - 1) + fib (x - 2)
 
+fibProgram :: [Closure]
+fibProgram = compile fibExpr
+
 fibTest :: Bool
-fibTest = C (fib 20) == interpret fibExpr && C (fib 20) == evaluate fibExpr
+fibTest = C (fib 20) == interpret fibExpr && C (fib 20) == evaluate fibProgram
 
 -- Takeuchi
 takExpr :: [Expr]
@@ -61,8 +64,11 @@ tak x y z =
     then z
     else tak (tak (x - 1) y z) (tak (y - 1) z x) (tak (z - 1) x y)
 
+takProgram :: [Closure]
+takProgram = compile takExpr
+
 takTest :: Bool
-takTest = C (tak 18 12 6) == interpret takExpr && C (tak 18 12 6) == evaluate takExpr
+takTest = C (tak 18 12 6) == interpret takExpr && C (tak 18 12 6) == evaluate takProgram
 
 -- Selection Sort
 pie :: [Int]
@@ -114,8 +120,11 @@ sortAux lst rest min =
         then sortAux (tail lst) (min : rest) (head lst)
         else sortAux (tail lst) (head lst : rest) min
 
+sortProgram :: [Closure]
+sortProgram = compile sortExpr
+
 sortTest :: Bool
-sortTest = Lst (map C $ sort pie) == interpret sortExpr && Lst (map C $ sort pie) == evaluate sortExpr
+sortTest = Lst (map C $ sort pie) == interpret sortExpr && Lst (map C $ sort pie) == evaluate sortProgram
 
 allTests :: [Bool]
 allTests = [fibTest, takTest, sortTest]

@@ -5,11 +5,12 @@ import Programs
 
 main :: IO ()
 main =
-  defaultMain
-    [ bgroup
-        "fib"
-        [ bench "impl-lang" $ whnf fib 20,
-          bench "interpreter" $ whnf interpret fibExpr,
-          bench "compiler" $ whnf evaluate fibExpr
+  let compiledProgram = compile fibExpr
+   in defaultMain
+        [ bgroup
+            "fib"
+            [ bench "impl-lang" $ whnf fib 20,
+              bench "interpreter" $ whnf interpret fibExpr,
+              bench "compiler" $ whnf evaluate compiledProgram
+            ]
         ]
-    ]
