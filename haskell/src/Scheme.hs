@@ -10,16 +10,10 @@ data Expr
   | App Expr [Expr]
   deriving (Show, Eq)
 
--- data TopExpr = Define String Expr | Expr Expr deriving (Show, Eq)
-
--- isDefine :: TopExpr -> Bool
--- isDefine (Define _ _) = True
--- isDefine _ = False
-
 data Value
   = Q String
   | C Int
-  | U ()
+  | U
   | Lst [Value]
   | L0 (Env -> () -> (Env, Value))
   | L1 (Env -> Value -> (Env, Value))
@@ -29,7 +23,7 @@ data Value
 instance Show Value where
   show (Q q) = "'" ++ q
   show (C c) = show c
-  show (U ()) = show "#<void>"
+  show U = show "#<void>"
   show (Lst vs) = show vs
   show (L0 _) = "#<procedure-0>"
   show (L1 _) = "#<procedure-1>"
@@ -39,7 +33,7 @@ instance Show Value where
 instance Eq Value where
   (Q q1) == (Q q2) = q1 == q2
   (C c1) == (C c2) = c1 == c2
-  (U ()) == (U ()) = True
+  U == U = True
   (Lst xs) == (Lst ys) = xs == ys
   _ == _ = False
 
@@ -68,5 +62,5 @@ initEnv =
       ("<", L2 (\env (C c1) (C c2) -> (env, if c1 < c2 then Q "#t" else Q "#f"))),
       ("+", L2 (\env (C c1) (C c2) -> (env, C (c1 + c2)))),
       ("-", L2 (\env (C c1) (C c2) -> (env, C (c1 - c2)))),
-      ("define", L2 (\(Env env) (Q f) v -> (Env ((f, v) : env), U ())))
+      ("define", L2 (\(Env env) (Q f) v -> (Env ((f, v) : env), U)))
     ]

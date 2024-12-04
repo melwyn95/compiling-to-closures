@@ -1,2 +1,4 @@
 (library
- (name OCaml))
+ (name OCaml)
+ (preprocess
+  (pps ppx_deriving.show ppx_deriving.eq)))
