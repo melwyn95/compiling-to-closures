@@ -29,7 +29,7 @@ data Value
 instance Show Value where
   show (Q q) = "'" ++ q
   show (C c) = show c
-  show (U ()) = show "()"
+  show (U ()) = show "#<void>"
   show (Lst vs) = show vs
   show (L0 _) = "#<procedure-0>"
   show (L1 _) = "#<procedure-1>"

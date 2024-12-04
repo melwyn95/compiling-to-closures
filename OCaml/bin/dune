@@ -1,0 +1,4 @@
+(executable
+ (public_name OCaml)
+ (name main)
+ (libraries OCaml))
