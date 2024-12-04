@@ -1,12 +1,17 @@
-module Interpreter where
+open Scheme
 
-import Scheme
+let interp_var : string -> env -> value =
+ fun x env -> Option.get (List.assoc_opt x env)
 
-interpret :: [Expr] -> Value
-interpret es = snd $ foldl (\(env, _) e -> interp e env) (initEnv, U) es
+let interp : expr -> env -> env * value =
+ fun expr env -> match expr with Var x -> (env, interp_var x env)
+
+let interpret : expr list -> value = failwith ""
+
+(* interpret es = snd $ foldl (\(env, _) e -> interp e env) (initEnv, U ()) es
 
 interp :: Expr -> Env -> (Env, Value)
-interp (Var x) env = (env, interpVar x env)
+interp (Var x) env = interpVar x env
 interp (Quote (Var x)) env = (env, Q x)
 interp (Cst c) env = (env, C c)
 interp (List xs) env =
@@ -26,10 +31,10 @@ interp (App f [x]) env = interpApp1 x f env
 interp (App f [x, y]) env = interpApp2 x y f env
 interp (App f [x, y, z]) env = interpApp3 x y z f env
 
-interpVar :: String -> Env -> Value
+interpVar :: String -> Env -> (Env, Value)
 interpVar x (Env env) =
   case lookup x env of
-    Just v -> v
+    Just v -> (Env env, v)
     Nothing -> error ("Unbound variable: " ++ x)
 
 interpCond :: Expr -> Expr -> Expr -> Env -> (Env, Value)
@@ -78,4 +83,4 @@ interpApp3 x y z f env =
       (_, x') = interp x env
       (_, y') = interp y env
       (_, z') = interp z env
-   in f' env x' y' z'
+   in f' env x' y' z' *)

@@ -8,7 +8,7 @@ compile :: [Expr] -> [Closure]
 compile = map gen
 
 evaluate :: [Closure] -> Value
-evaluate cls = snd $ foldl (\(env, _) c -> c env) (initEnv, U ()) cls
+evaluate cls = snd $ foldl (\(env, _) c -> c env) (initEnv, U) cls
 
 gen :: Expr -> Closure
 gen (Var x) = genRef x
