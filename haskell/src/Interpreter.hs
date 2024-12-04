@@ -57,7 +57,7 @@ interpPcr3 a b c body =
 interpApp0 :: Expr -> Env -> (Env, Value)
 interpApp0 f env =
   let (env1, L0 f') = interp f env
-   in f' env1 ()
+   in f' env ()
 
 interpApp1 :: Expr -> Expr -> Env -> (Env, Value)
 interpApp1 x f env =

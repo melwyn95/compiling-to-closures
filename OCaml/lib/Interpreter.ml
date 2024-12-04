@@ -3,84 +3,78 @@ open Scheme
 let interp_var : string -> env -> value =
  fun x env -> Option.get (List.assoc_opt x env)
 
-let interp : expr -> env -> env * value =
- fun expr env -> match expr with Var x -> (env, interp_var x env)
+let rec interp : expr -> env -> env * value =
+ fun expr env ->
+  match expr with
+  | Var x -> (env, interp_var x env)
+  | Quote (Var x) -> (env, Q x)
+  | Cst c -> (env, C c)
+  | List xs ->
+      ( env,
+        Lst
+          (List.rev
+             (List.fold_left
+                (fun ys x ->
+                  let _, y = interp x env in
+                  y :: ys)
+                [] xs)) )
+  | If (cond, csqt, alt) -> interp_cond cond csqt alt env
+  | Lam ([], body) -> (env, interp_pcr_0 body)
+  | Lam ([ x ], body) -> (env, interp_pcr_1 x body)
+  | Lam ([ x; y ], body) -> (env, interp_pcr_2 x y body)
+  | Lam ([ x; y; z ], body) -> (env, interp_pcr_3 x y z body)
+  | Lam _ -> failwith "more than 3 params not supported"
+  | App (f, []) -> interp_app_0 f env
+  | App (f, [ x ]) -> interp_app_1 f x env
+  | App (f, [ x; y ]) -> interp_app_2 f x y env
+  | App (f, [ x; y; z ]) -> interp_app_3 f x y z env
+  | App _ -> failwith "more than 3 params not supported"
+  | Quote _ -> failwith "quoting arbitrary expression not supported"
 
-let interpret : expr list -> value = failwith ""
+and interp_cond : expr -> expr -> expr -> env -> env * value =
+ fun cond csqt alt env ->
+  let _, v1 = interp cond env in
+  if eq_value v1 (Q "#t") then interp csqt env else interp alt env
 
-(* interpret es = snd $ foldl (\(env, _) e -> interp e env) (initEnv, U ()) es
+and interp_pcr_0 : expr -> value =
+ fun body -> L0 (fun env () -> interp body env)
 
-interp :: Expr -> Env -> (Env, Value)
-interp (Var x) env = interpVar x env
-interp (Quote (Var x)) env = (env, Q x)
-interp (Cst c) env = (env, C c)
-interp (List xs) env =
-  let ys =
-        foldl
-          (\ys x -> let (env1, y) = interp x env in y : ys)
-          []
-          xs
-   in (env, Lst (reverse ys))
-interp (If cond csqt alt) env = interpCond cond csqt alt env
-interp (Lam [] body) env = (env, interpPcr0 body)
-interp (Lam [x] body) env = (env, interpPcr1 x body)
-interp (Lam [x, y] body) env = (env, interpPcr2 x y body)
-interp (Lam [x, y, z] body) env = (env, interpPcr3 x y z body)
-interp (App f []) env = interpApp0 f env
-interp (App f [x]) env = interpApp1 x f env
-interp (App f [x, y]) env = interpApp2 x y f env
-interp (App f [x, y, z]) env = interpApp3 x y z f env
+and interp_pcr_1 : string -> expr -> value =
+ fun a body -> L1 (fun env x -> interp body ((a, x) :: env))
 
-interpVar :: String -> Env -> (Env, Value)
-interpVar x (Env env) =
-  case lookup x env of
-    Just v -> (Env env, v)
-    Nothing -> error ("Unbound variable: " ++ x)
+and interp_pcr_2 : string -> string -> expr -> value =
+ fun a b body -> L2 (fun env x y -> interp body ((a, x) :: (b, y) :: env))
 
-interpCond :: Expr -> Expr -> Expr -> Env -> (Env, Value)
-interpCond cond csqt alt env =
-  let (env1, v1) = interp cond env
-   in if v1 == Q "#t"
-        then interp csqt env
-        else interp alt env
+and interp_pcr_3 : string -> string -> string -> expr -> value =
+ fun a b c body ->
+  L3 (fun env x y z -> interp body ((a, x) :: (b, y) :: (c, z) :: env))
 
-interpPcr0 :: Expr -> Value
-interpPcr0 body = L0 (\env () -> interp body env)
+and interp_app_0 : expr -> env -> env * value =
+ fun f env ->
+  match interp f env with _, L0 f -> f env () | _ -> failwith "not a L0"
 
-interpPcr1 :: String -> Expr -> Value
-interpPcr1 a body =
-  L1 (\(Env env) x -> interp body (Env ((a, x) : env)))
+and interp_app_1 : expr -> expr -> env -> env * value =
+ fun f x env ->
+  let _, f = interp f env in
+  let _, x = interp x env in
+  match f with L1 f -> f env x | _ -> failwith "not a L1"
 
-interpPcr2 :: String -> String -> Expr -> Value
-interpPcr2 a b body =
-  L2 (\(Env env) x y -> interp body (Env ((a, x) : (b, y) : env)))
+and interp_app_2 : expr -> expr -> expr -> env -> env * value =
+ fun f x y env ->
+  let _, f = interp f env in
+  let _, x = interp x env in
+  let _, y = interp y env in
+  match f with L2 f -> f env x y | _ -> failwith "not a L2"
 
-interpPcr3 :: String -> String -> String -> Expr -> Value
-interpPcr3 a b c body =
-  L3 (\(Env env) x y z -> interp body (Env ((a, x) : (b, y) : (c, z) : env)))
+and interp_app_3 : expr -> expr -> expr -> expr -> env -> env * value =
+ fun f x y z env ->
+  let _, f = interp f env in
+  let _, x = interp x env in
+  let _, y = interp y env in
+  let _, z = interp z env in
+  match f with L3 f -> f env x y z | _ -> failwith "not a L3"
 
-interpApp0 :: Expr -> Env -> (Env, Value)
-interpApp0 f env =
-  let (env1, L0 f') = interp f env
-   in f' env1 ()
-
-interpApp1 :: Expr -> Expr -> Env -> (Env, Value)
-interpApp1 x f env =
-  let (_, L1 f') = interp f env
-      (_, x') = interp x env
-   in f' env x'
-
-interpApp2 :: Expr -> Expr -> Expr -> Env -> (Env, Value)
-interpApp2 x y f env =
-  let (_, L2 f') = interp f env
-      (_, x') = interp x env
-      (_, y') = interp y env
-   in f' env x' y'
-
-interpApp3 :: Expr -> Expr -> Expr -> Expr -> Env -> (Env, Value)
-interpApp3 x y z f env =
-  let (_, L3 f') = interp f env
-      (_, x') = interp x env
-      (_, y') = interp y env
-      (_, z') = interp z env
-   in f' env x' y' z' *)
+let interpret : expr list -> value =
+ fun es ->
+  let _, v = List.fold_left (fun (env, _) e -> interp e env) (init_env, U) es in
+  v
