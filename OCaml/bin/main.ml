@@ -157,64 +157,76 @@ let pie =
     4;
   ]
 
-(* 
-
-
--- 
-
-sortExpr :: [Expr]
-sortExpr =
-  [ App
-      (Var "define")
-      [ Quote (Var "sort"),
-        Lam
-          ["lst"]
-          ( If
-              (App (Var "null?") [Var "lst"])
-              (List [])
-              ( App
-                  (Var "sort-aux")
-                  [App (Var "cdr") [Var "lst"], List [], App (Var "car") [Var "lst"]]
-              )
-          )
-      ],
+let sort_expr : expr list =
+  [
     App
-      (Var "define")
-      [ Quote (Var "sort-aux"),
-        Lam
-          ["lst", "rest", "min"]
-          ( If
-              (App (Var "null?") [Var "lst"])
-              (App (Var "cons") [Var "min", App (Var "sort") [Var "rest"]])
-              ( If
-                  (App (Var "<") [App (Var "car") [Var "lst"], Var "min"])
-                  (App (Var "sort-aux") [App (Var "cdr") [Var "lst"], App (Var "cons") [Var "min", Var "rest"], App (Var "car") [Var "lst"]])
-                  (App (Var "sort-aux") [App (Var "cdr") [Var "lst"], App (Var "cons") [App (Var "car") [Var "lst"], Var "rest"], Var "min"])
-              )
-          )
-      ],
-    (App (Var "sort") [List (map Cst pie)])
+      ( Var "define",
+        [
+          Quote (Var "sort");
+          Lam
+            ( [ "lst" ],
+              If
+                ( App (Var "null?", [ Var "lst" ]),
+                  List [],
+                  App
+                    ( Var "sort-aux",
+                      [
+                        App (Var "cdr", [ Var "lst" ]);
+                        List [];
+                        App (Var "car", [ Var "lst" ]);
+                      ] ) ) );
+        ] );
+    App
+      ( Var "define",
+        [
+          Quote (Var "sort-aux");
+          Lam
+            ( [ "lst"; "rest"; "min" ],
+              If
+                ( App (Var "null?", [ Var "lst" ]),
+                  App
+                    (Var "cons", [ Var "min"; App (Var "sort", [ Var "rest" ]) ]),
+                  If
+                    ( App
+                        (Var "<", [ App (Var "car", [ Var "lst" ]); Var "min" ]),
+                      App
+                        ( Var "sort-aux",
+                          [
+                            App (Var "cdr", [ Var "lst" ]);
+                            App (Var "cons", [ Var "min"; Var "rest" ]);
+                            App (Var "car", [ Var "lst" ]);
+                          ] ),
+                      App
+                        ( Var "sort-aux",
+                          [
+                            App (Var "cdr", [ Var "lst" ]);
+                            App
+                              ( Var "cons",
+                                [ App (Var "car", [ Var "lst" ]); Var "rest" ]
+                              );
+                            Var "min";
+                          ] ) ) ) );
+        ] );
+    App (Var "sort", [ List (List.map (fun n -> Cst n) pie) ]);
   ]
 
-sort :: [Int] -> [Int]
-sort lst = if null lst then [] else sortAux (tail lst) [] (head lst)
+let rec sort : int list -> int list =
+ fun lst ->
+  if List.is_empty lst then [] else sort_aux (List.tl lst) [] (List.hd lst)
 
-sortAux :: [Int] -> [Int] -> Int -> [Int]
-sortAux lst rest min =
-  if null lst
-    then min : sort rest
-    else
-      if head lst < min
-        then sortAux (tail lst) (min : rest) (head lst)
-        else sortAux (tail lst) (head lst : rest) min
+and sort_aux : int list -> int list -> int -> int list =
+ fun lst rest min ->
+  if List.is_empty lst then min :: sort rest
+  else if List.hd lst < min then
+    sort_aux (List.tl lst) (min :: rest) (List.hd lst)
+  else sort_aux (List.tl lst) (List.hd lst :: rest) min
 
-sortProgram :: [Closure]
-sortProgram = compile sortExpr
+let _ = Lst (List.map (fun n -> C n) @@ sort pie)
 
-sortTest :: Bool
-sortTest = Lst (map C $ sort pie) == interpret sortExpr && Lst (map C $ sort pie) == evaluate sortProgram
-
-allTests :: [Bool]
-allTests = [fibTest, takTest, sortTest] *)
+let () =
+  assert (
+    eq_value
+      (Lst (List.map (fun n -> C n) @@ sort pie))
+      (Lib.Interpreter.interpret sort_expr))
 
 let () = print_endline "All Tests Passed!"
