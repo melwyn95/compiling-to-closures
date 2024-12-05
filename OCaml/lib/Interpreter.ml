@@ -8,6 +8,7 @@ let rec interp : expr -> env -> env * value =
   match expr with
   | Var x -> (env, interp_var x env)
   | Quote (Var x) -> (env, Q x)
+  | Quote _ -> failwith "quoting arbitrary expression not supported"
   | Cst c -> (env, C c)
   | List xs ->
       ( env,
@@ -29,7 +30,6 @@ let rec interp : expr -> env -> env * value =
   | App (f, [ x; y ]) -> interp_app_2 f x y env
   | App (f, [ x; y; z ]) -> interp_app_3 f x y z env
   | App _ -> failwith "more than 3 params not supported"
-  | Quote _ -> failwith "quoting arbitrary expression not supported"
 
 and interp_cond : expr -> expr -> expr -> env -> env * value =
  fun cond csqt alt env ->
