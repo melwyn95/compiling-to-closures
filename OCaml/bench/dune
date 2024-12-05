@@ -1,9 +1,4 @@
 (executable
  (name bench)
  (public_name bench)
- (libraries
-  ; core_unix.command_unix
-  core
-  core_bench
-  ; core_unix.time_stamp_counter
-  ))
+ (libraries core core_bench lib))
