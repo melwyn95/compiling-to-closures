@@ -111,3 +111,5 @@ Estimated testing time 1m30s (9 benchmarks x 10s). Change using '-quota'.
 Benchmarks that take 1ns to 100ms can be estimated precisely. For more reliable 
 estimates, redesign your benchmark to have a shorter execution time.
 ```
+
+Apparently there is almost no difference between the interpreted vs compiled approaches.
