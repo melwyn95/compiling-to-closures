@@ -27,7 +27,7 @@ Feeley, M., & Lapalme, G. (1987). Using closures for code generation. Computer L
 - The compiler targets a base subset of Scheme
   - Higher level constructs `begin`, `cond`, `let`, etc. can be desugared to the base subset
 - A closure is generated for each primitive construct of the language
-  - When a closure is applied it evaluated the part of original expression 
+  - When a closure is applied it evaluates the part of original expression 
 - A compiled form of an expression combines these closures into a network of closures
 - See sections 3.1 to 3.6 for specifics of code generation for each construct
 - Some optimizations
